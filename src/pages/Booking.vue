@@ -16,8 +16,18 @@
 
     <h1 class="text-3xl font-bold mb-6">Book Tickets</h1>
 
+    <!-- Loading State -->
+    <div v-if="movieStore.loading" class="text-center text-gray-600 text-lg py-10">
+      Loading movie details...
+    </div>
+
+    <!-- Error or No Movie -->
+    <div v-else-if="!movie.id" class="text-center text-gray-600 text-lg py-10">
+      Movie not found.
+    </div>
+
     <!-- Movie Info Card -->
-    <div class="bg-linear-to-r from-gray-50 to-white border border-gray-200 rounded-xl shadow-md p-6 mb-8">
+    <div v-else class="bg-linear-to-r from-gray-50 to-white border border-gray-200 rounded-xl shadow-md p-6 mb-8">
       <div class="flex items-start gap-6">
         <!-- Movie Poster -->
         <div class="shrink-0">
@@ -63,12 +73,14 @@
       </div>
     </div>
 
-    <!-- STEP NAVIGATION -->
-    <div class="flex gap-2 mb-8 text-sm">
-      <div :class="[step === 1 ? activeTab : inactiveTab]">1. Select Theatre</div>
-      <div :class="[step === 2 ? activeTab : inactiveTab]">2. Select Showtime</div>
-      <div :class="[step === 3 ? activeTab : inactiveTab]">3. Select Seats</div>
-    </div>
+    <!-- Booking Steps - Only show when movie is loaded -->
+    <template v-if="movie.id">
+      <!-- STEP NAVIGATION -->
+      <div class="flex gap-2 mb-8 text-sm">
+        <div :class="[step === 1 ? activeTab : inactiveTab]">1. Select Theatre</div>
+        <div :class="[step === 2 ? activeTab : inactiveTab]">2. Select Showtime</div>
+        <div :class="[step === 3 ? activeTab : inactiveTab]">3. Select Seats</div>
+      </div>
 
 
     <!-- ===== STEP 1 — SELECT THEATRE ===== -->
@@ -141,12 +153,13 @@
         Confirm Booking
       </button>
     </div>
+    </template>
 
   </div>
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useMovieStore } from "../store/movies";
 import SeatGrid from "../components/SeatGrid.vue";
@@ -156,9 +169,16 @@ const route = useRoute();
 const router = useRouter();
 const movieStore = useMovieStore();
 
-// load movie
-movieStore.getMovie(route.params.id);
-const movie = movieStore.selectedMovie;
+// Fetch movies if not already loaded, then get the specific movie
+onMounted(async () => {
+  if (movieStore.movies.length === 0) {
+    await movieStore.fetchMovies();
+  }
+  movieStore.getMovie(route.params.id);
+});
+
+// Make movie reactive - it will update when selectedMovie changes
+const movie = computed(() => movieStore.selectedMovie || {});
 
 // steps
 const step = ref(1);
@@ -194,7 +214,7 @@ const confirmBooking = () => {
   alert(`
 Booking Confirmed 🎉
 
-Movie: ${movie.title}
+Movie: ${movie.value.title}
 Theatre: ${selectedTheatre.value.name}
 Time: ${selectedTime.value}
 Seats: ${selectedSeats.value.join(", ")}

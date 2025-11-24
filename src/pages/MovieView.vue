@@ -15,7 +15,15 @@
     </div>
 
     <!-- Movie Details Layout -->
-    <div class="max-w-6xl mx-auto bg-white p-6 rounded-lg shadow-md">
+    <div v-if="movieStore.loading" class="max-w-6xl mx-auto bg-white p-6 rounded-lg shadow-md text-center">
+      <p class="text-gray-600 text-lg">Loading movie details...</p>
+    </div>
+
+    <div v-else-if="!movie.id" class="max-w-6xl mx-auto bg-white p-6 rounded-lg shadow-md text-center">
+      <p class="text-gray-600 text-lg">Movie not found.</p>
+    </div>
+
+    <div v-else class="max-w-6xl mx-auto bg-white p-6 rounded-lg shadow-md">
 
       <!-- Top Section -->
       <div class="flex flex-col md:flex-row gap-8">
@@ -80,7 +88,7 @@
 
 <script setup>
 import { useRoute, useRouter } from "vue-router";
-import { computed } from "vue";
+import { computed, onMounted } from "vue";
 import { useMovieStore } from "../store/movies";
 import { useFavoritesStore } from "../store/favorites";
 
@@ -92,20 +100,27 @@ const router = useRouter();
 const movieStore = useMovieStore();
 const favStore = useFavoritesStore();
 
-// Load movie by ID
-movieStore.getMovie(route.params.id);
-const movie = movieStore.selectedMovie;
+// Fetch movies if not already loaded, then get the specific movie
+onMounted(async () => {
+  if (movieStore.movies.length === 0) {
+    await movieStore.fetchMovies();
+  }
+  movieStore.getMovie(route.params.id);
+});
+
+// Make movie reactive - it will update when selectedMovie changes
+const movie = computed(() => movieStore.selectedMovie || {});
 
 // Check if favorite
 const isFav = computed(() =>
-  favStore.favorites.some(m => m.id === movie.id)
+  favStore.favorites.some(m => m.id === movie.value.id)
 );
 
-const toggleFav = () => favStore.toggleFavorite(movie);
+const toggleFav = () => favStore.toggleFavorite(movie.value);
 
 // Go to booking page
 const book = () => {
-  router.push(`/booking/${movie.id}`);
+  router.push(`/booking/${movie.value.id}`);
 };
 
 // Go back to previous page

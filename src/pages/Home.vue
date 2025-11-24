@@ -70,14 +70,33 @@
     <!-- Movies Section with Padding -->
     <div class="px-6 pb-6">
       <h2 class="text-2xl font-semibold mb-4">Recommended Movies</h2>
+      
+      <!-- Loading State -->
       <div
-        v-if="store.filteredMovies.length === 0"
+        v-if="store.loading"
+        class="text-center text-gray-600 text-lg mt-10"
+      >
+        Loading movies...
+      </div>
+
+      <!-- Error State -->
+      <div
+        v-else-if="store.error"
+        class="text-center text-red-600 text-lg mt-10"
+      >
+        {{ store.error }}
+      </div>
+
+      <!-- No Movies Found -->
+      <div
+        v-else-if="store.filteredMovies.length === 0"
         class="text-center text-gray-600 text-lg mt-10"
       >
         No movies found.
       </div>
 
-      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
+      <!-- Movies Grid -->
+      <div v-else class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
         <MovieCard
           v-for="m in store.filteredMovies"
           :key="m.id"
@@ -138,6 +157,7 @@ const stopAutoPlay = () => {
 // Lifecycle hooks
 onMounted(() => {
   startAutoPlay();
+  store.fetchMovies();
 });
 
 onUnmounted(() => {
