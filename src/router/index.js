@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import Home from '../pages/Home.vue'
 import MovieView from '../pages/MovieView.vue'
 import Booking from '../pages/Booking.vue'
+import NotFound from '../pages/NotFound.vue'
 
 const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
@@ -13,6 +14,7 @@ const router = createRouter({
         },
         { path: "/movie/:id", name: "MovieView", component: MovieView },
         { path: "/booking/:id", name: "Booking", component: Booking },
+        { path: "/:pathMatch(.*)*", name: "NotFound", component: NotFound }
         // Add more routes here
     ]
 })

@@ -72,12 +72,10 @@
       <h2 class="text-2xl font-semibold mb-4">Recommended Movies</h2>
       
       <!-- Loading State -->
-      <div
-        v-if="store.loading"
-        class="text-center text-gray-600 text-lg mt-10"
-      >
-        Loading movies...
+      <div v-if="store.loading" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
+        <MovieSkeleton v-for="n in 12" :key="n" />
       </div>
+
 
       <!-- Error State -->
       <div
@@ -112,6 +110,7 @@
 import { ref, onMounted, onUnmounted } from "vue";
 import MovieCard from "../components/MovieCard.vue";
 import { useMovieStore } from "../store/movies";
+import MovieSkeleton from "../components/MovieSkeleton.vue";
 
 const store = useMovieStore();
 const movies = store.movies;

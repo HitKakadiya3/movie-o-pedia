@@ -102,10 +102,16 @@ const favStore = useFavoritesStore();
 
 // Fetch movies if not already loaded, then get the specific movie
 onMounted(async () => {
+  // If movies not loaded -> fetch
   if (movieStore.movies.length === 0) {
     await movieStore.fetchMovies();
   }
+
   movieStore.getMovie(route.params.id);
+
+  if (!movieStore.selectedMovie) {
+    router.push("/404");
+  }
 });
 
 // Make movie reactive - it will update when selectedMovie changes

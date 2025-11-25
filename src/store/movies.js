@@ -2,11 +2,12 @@ import { defineStore } from "pinia";
 
 export const useMovieStore = defineStore("movies", {
     state: () => ({
-        movies: [],
+        movies: JSON.parse(localStorage.getItem("movies") || "[]"),
         selectedMovie: null,
         searchText: "",
         loading: false,
-        error: null
+        error: null,
+        globalLoading: false
     }),
 
     getters: {
@@ -21,8 +22,10 @@ export const useMovieStore = defineStore("movies", {
 
     actions: {
         async fetchMovies() {
-            this.loading = true;
-            this.error = null;
+            // If movies are already stored -> do not fetch
+            if (this.movies.length > 0) return;
+
+            this.globalLoading = true;
 
             try {
                 const res = await fetch("http://localhost:5000/movies");
@@ -30,13 +33,23 @@ export const useMovieStore = defineStore("movies", {
                 if (!res.ok) throw new Error("Failed to fetch movies");
 
                 const data = await res.json();
-                this.movies = data;  // store list
+
+                this.movies = data;
+
+                // Save to localStorage
+                localStorage.setItem("movies", JSON.stringify(data));
+
             } catch (err) {
                 this.error = "Unable to load movie list.";
                 console.error(err);
-            } finally {
-                this.loading = false;
             }
+
+            this.globalLoading = false;
+        },
+
+        clearLocalMovies() {
+            localStorage.removeItem("movies");
+            this.movies = [];
         },
 
         setSearchText(text) {
@@ -44,8 +57,7 @@ export const useMovieStore = defineStore("movies", {
         },
 
         getMovie(id) {
-            // movie already fetched → find locally
-            this.selectedMovie = this.movies.find(m => m.id == id);
+            this.selectedMovie = this.movies.find(m => m.id == id) || null;
         }
     }
 });
