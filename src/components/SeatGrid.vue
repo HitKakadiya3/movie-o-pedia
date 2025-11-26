@@ -73,20 +73,33 @@
 </template>
 
 <script setup>
+import { computed } from 'vue';
+import { useBookingsStore } from '../store/bookings';
+
 const props = defineProps({
   modelValue: Array,
-  layout: Array
+  layout: Array,
+  movieId: String,
+  theatreId: String,
+  showtime: String
 });
 
 const emit = defineEmits(["update:modelValue"]);
 
-// Example Booked seats
-const bookedSeats = ["A3", "A7", "B5", "C8"];
+const bookingsStore = useBookingsStore();
+
+// Get booked seats from store based on movie, theatre, and showtime
+const bookedSeats = computed(() => {
+  if (!props.movieId || !props.theatreId || !props.showtime) {
+    return [];
+  }
+  return bookingsStore.getBookedSeats(props.movieId, props.theatreId, props.showtime);
+});
 
 // Row seat styles
 const seatClass = (seat) => [
   "w-8 h-8 flex items-center justify-center rounded text-xs border transition",
-  isBooked(seat)
+  bookedSeats.value.includes(seat)
     ? "bg-red-500 text-white border-red-600 cursor-not-allowed"
     : props.modelValue.includes(seat)
     ? "bg-green-600 text-white border-green-700"
@@ -94,7 +107,7 @@ const seatClass = (seat) => [
 ];
 
 // Check if booked
-const isBooked = (s) => bookedSeats.includes(s);
+const isBooked = (s) => bookedSeats.value.includes(s);
 
 // **BookMyShow dual seating layout**
 const seatLayout = props.layout;

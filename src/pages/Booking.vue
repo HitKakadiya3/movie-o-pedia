@@ -143,6 +143,9 @@
         v-if="step === 3"
         v-model="selectedSeats"
         :layout="selectedLayout"
+        :movie-id="movie.id"
+        :theatre-id="selectedTheatre.id"
+        :showtime="selectedTime"
       />
 
       <button
@@ -155,6 +158,14 @@
     </div>
     </template>
 
+    <!-- Booking Confirmation Modal -->
+    <BookingConfirmationModal
+      :show="showConfirmationModal"
+      :booking="confirmedBooking"
+      @close="closeModal"
+      @view-bookings="handleViewBookings"
+    />
+
   </div>
 </template>
 
@@ -162,12 +173,15 @@
 import { ref, computed, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useMovieStore } from "../store/movies";
+import { useBookingsStore } from "../store/bookings";
 import SeatGrid from "../components/SeatGrid.vue";
+import BookingConfirmationModal from "../components/BookingConfirmationModal.vue";
 import { theatreLayouts } from "../data/theatreLayouts";
 
 const route = useRoute();
 const router = useRouter();
 const movieStore = useMovieStore();
+const bookingsStore = useBookingsStore();
 
 // Fetch movies if not already loaded, then get the specific movie
 onMounted(async () => {
@@ -200,10 +214,26 @@ const selectedTime = ref("");
 const selectedSeats = ref([]);
 const selectedLayout = ref([]);
 
+// Modal state
+const showConfirmationModal = ref(false);
+const confirmedBooking = ref(null);
+
 // click theatre → move to next step
 const selectTheatre = (theatre) => {
   selectedTheatre.value = theatre;
   selectedLayout.value = theatreLayouts[theatre.id].layout;
+  
+  // Save theatre selection to bookings store
+  bookingsStore.setCurrentBooking({
+    movieId: movie.value.id,
+    movieTitle: movie.value.title,
+    theatre: {
+      id: theatre.id,
+      name: theatre.name,
+      location: theatre.location
+    }
+  });
+  
   step.value = 2;
 };
 
@@ -211,14 +241,34 @@ const selectTheatre = (theatre) => {
 const showTimes = ["9:00 AM", "1:00 PM", "4:30 PM", "7:00 PM", "10:15 PM"];
 
 const confirmBooking = () => {
-  alert(`
-Booking Confirmed 🎉
+  // Update current booking with final details
+  bookingsStore.setCurrentBooking({
+    showtime: selectedTime.value,
+    seats: selectedSeats.value
+  });
+  
+  // Confirm and save booking to localStorage
+  const booking = bookingsStore.confirmBooking();
+  
+  // Show confirmation modal
+  confirmedBooking.value = booking;
+  showConfirmationModal.value = true;
+};
 
-Movie: ${movie.value.title}
-Theatre: ${selectedTheatre.value.name}
-Time: ${selectedTime.value}
-Seats: ${selectedSeats.value.join(", ")}
-  `);
+// Close modal and redirect
+const closeModal = () => {
+  showConfirmationModal.value = false;
+  
+  // Redirect to home page after modal closes
+  setTimeout(() => {
+    router.push('/');
+  }, 300);
+};
+
+// Handle view bookings - just close modal without redirect
+const handleViewBookings = () => {
+  showConfirmationModal.value = false;
+  // Navigation is handled by the modal component
 };
 
 // Go back to previous page
