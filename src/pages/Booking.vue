@@ -1,4 +1,7 @@
 <template>
+  <!-- Booking Timer -->
+  <BookingTimer @expired="handleTimerExpired" />
+
   <div class="p-6 max-w-5xl mx-auto">
 
     <!-- Back Button -->
@@ -124,7 +127,7 @@
       <button
         class="mt-6 bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-purple-700"
         :disabled="!selectedTime"
-        @click="step = 3"
+        @click="continueToSeats"
       >
         Continue to Seat Selection
       </button>
@@ -166,17 +169,31 @@
       @view-bookings="handleViewBookings"
     />
 
+    <!-- Navigation Warning Modal -->
+    <NavigationWarningModal
+      :show="showNavigationWarning"
+      @confirm="handleLeaveConfirm"
+      @cancel="showNavigationWarning = false"
+    />
+
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue";
-import { useRoute, useRouter } from "vue-router";
+import { ref, computed, onMounted, onBeforeUnmount, defineAsyncComponent } from "vue";
+import { useRoute, useRouter, onBeforeRouteLeave } from "vue-router";
 import { useMovieStore } from "../store/movies";
 import { useBookingsStore } from "../store/bookings";
 import SeatGrid from "../components/SeatGrid.vue";
-import BookingConfirmationModal from "../components/BookingConfirmationModal.vue";
+import BookingTimer from "../components/BookingTimer.vue";
 import { theatreLayouts } from "../data/theatreLayouts";
+
+const BookingConfirmationModal = defineAsyncComponent(() => 
+  import("../components/BookingConfirmationModal.vue")
+);
+const NavigationWarningModal = defineAsyncComponent(() => 
+  import("../components/NavigationWarningModal.vue")
+);
 
 const route = useRoute();
 const router = useRouter();
@@ -189,6 +206,36 @@ onMounted(async () => {
     await movieStore.fetchMovies();
   }
   movieStore.getMovie(route.params.id);
+  
+  // Restore state from store if available
+  if (bookingsStore.currentBooking.movieId === route.params.id) {
+    // Restore theatre
+    if (bookingsStore.currentBooking.theatre) {
+      selectedTheatre.value = bookingsStore.currentBooking.theatre;
+      selectedLayout.value = theatreLayouts[bookingsStore.currentBooking.theatre.id].layout;
+      step.value = 2;
+    }
+    
+    // Restore showtime
+    if (bookingsStore.currentBooking.showtime) {
+      selectedTime.value = bookingsStore.currentBooking.showtime;
+      step.value = 3;
+    }
+    
+    // Restore seats
+    if (bookingsStore.currentBooking.seats && bookingsStore.currentBooking.seats.length > 0) {
+      selectedSeats.value = bookingsStore.currentBooking.seats;
+    }
+  } else {
+    // If booking is for a different movie, clear it
+    bookingsStore.clearCurrentBooking();
+    bookingsStore.stopTimer();
+  }
+  
+  // Check if timer expired while we were away
+  if (bookingsStore.isTimerExpired()) {
+    handleTimerExpired();
+  }
 });
 
 // Make movie reactive - it will update when selectedMovie changes
@@ -217,6 +264,8 @@ const selectedLayout = ref([]);
 // Modal state
 const showConfirmationModal = ref(false);
 const confirmedBooking = ref(null);
+const showNavigationWarning = ref(false);
+let pendingNavigation = null;
 
 // click theatre → move to next step
 const selectTheatre = (theatre) => {
@@ -234,11 +283,23 @@ const selectTheatre = (theatre) => {
     }
   });
   
+  // Start timer when booking begins
+  bookingsStore.startTimer();
+  
   step.value = 2;
 };
 
 // Show times
 const showTimes = ["9:00 AM", "1:00 PM", "4:30 PM", "7:00 PM", "10:15 PM"];
+
+// Continue to seat selection
+const continueToSeats = () => {
+  // Save showtime to store so it persists
+  bookingsStore.setCurrentBooking({
+    showtime: selectedTime.value
+  });
+  step.value = 3;
+};
 
 const confirmBooking = () => {
   // Update current booking with final details
@@ -249,6 +310,9 @@ const confirmBooking = () => {
   
   // Confirm and save booking to localStorage
   const booking = bookingsStore.confirmBooking();
+  
+  // Stop timer when booking is confirmed
+  bookingsStore.stopTimer();
   
   // Show confirmation modal
   confirmedBooking.value = booking;
@@ -273,6 +337,55 @@ const handleViewBookings = () => {
 
 // Go back to previous page
 const goBack = () => {
-  router.back();
+  if (bookingsStore.timerActive) {
+    showNavigationWarning.value = true;
+    pendingNavigation = 'back';
+  } else {
+    router.back();
+  }
 };
+
+// Handle timer expiration
+const handleTimerExpired = () => {
+  // Clear booking data
+  bookingsStore.clearCurrentBooking();
+  bookingsStore.stopTimer();
+  
+  // Redirect to home page
+  router.push('/');
+};
+
+// Handle confirmed leave
+const handleLeaveConfirm = () => {
+  showNavigationWarning.value = false;
+  bookingsStore.stopTimer();
+  bookingsStore.clearCurrentBooking();
+  
+  if (pendingNavigation === 'back') {
+    router.back();
+  } else if (pendingNavigation) {
+    router.push(pendingNavigation);
+  }
+  pendingNavigation = null;
+};
+
+// Navigation guard for route changes
+onBeforeRouteLeave((to, from, next) => {
+  if (bookingsStore.timerActive && !showConfirmationModal.value) {
+    showNavigationWarning.value = true;
+    pendingNavigation = to.path;
+    next(false);
+  } else {
+    next();
+  }
+});
+
+// Cleanup timer on component unmount
+onBeforeUnmount(() => {
+  // Don't stop timer if booking was confirmed (modal is showing)
+  if (!showConfirmationModal.value && bookingsStore.timerActive) {
+    bookingsStore.stopTimer();
+    bookingsStore.clearCurrentBooking();
+  }
+});
 </script>

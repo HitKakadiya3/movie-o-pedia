@@ -4,14 +4,19 @@ export const useBookingsStore = defineStore("bookings", {
     state: () => ({
         // Initialize from localStorage (persists across browser sessions)
         bookings: JSON.parse(localStorage.getItem("bookings") || "[]"),
-        currentBooking: {
+        currentBooking: JSON.parse(localStorage.getItem("currentBooking")) || {
             movieId: null,
             movieTitle: null,
             theatre: null,
             showtime: null,
             seats: [],
             bookingDate: null
-        }
+        },
+        // Booking timer state - restore from localStorage if available
+        timerActive: JSON.parse(localStorage.getItem("timerActive")) || false,
+        timerStartTime: JSON.parse(localStorage.getItem("timerStartTime")) || null,
+        timerDuration: 600, // 10 minutes in seconds
+        currentTick: 0 // Reactive tick counter for timer updates
     }),
 
     getters: {
@@ -49,6 +54,18 @@ export const useBookingsStore = defineStore("bookings", {
             });
 
             return bookedSeats;
+        },
+
+        // Get remaining time in seconds
+        timeRemaining(state) {
+            if (!state.timerActive || !state.timerStartTime) {
+                return 0;
+            }
+            // Access currentTick to make this reactive
+            state.currentTick;
+            const elapsed = Math.floor((Date.now() - state.timerStartTime) / 1000);
+            const remaining = state.timerDuration - elapsed;
+            return Math.max(0, remaining);
         }
     },
 
@@ -59,6 +76,7 @@ export const useBookingsStore = defineStore("bookings", {
                 ...this.currentBooking,
                 ...bookingData
             };
+            localStorage.setItem("currentBooking", JSON.stringify(this.currentBooking));
         },
 
         // Clear current booking
@@ -71,6 +89,7 @@ export const useBookingsStore = defineStore("bookings", {
                 seats: [],
                 bookingDate: null
             };
+            localStorage.removeItem("currentBooking");
         },
 
         // Confirm and save booking
@@ -133,6 +152,35 @@ export const useBookingsStore = defineStore("bookings", {
         clearAllBookings() {
             this.bookings = [];
             localStorage.removeItem("bookings");
+        },
+
+        // Start booking timer
+        startTimer() {
+            this.timerActive = true;
+            this.timerStartTime = Date.now();
+            this.currentTick = 0;
+
+            localStorage.setItem("timerActive", "true");
+            localStorage.setItem("timerStartTime", JSON.stringify(this.timerStartTime));
+        },
+
+        // Update timer tick (called every second by component)
+        updateTick() {
+            this.currentTick++;
+        },
+
+        // Stop booking timer
+        stopTimer() {
+            this.timerActive = false;
+            this.timerStartTime = null;
+
+            localStorage.removeItem("timerActive");
+            localStorage.removeItem("timerStartTime");
+        },
+
+        // Check if timer has expired
+        isTimerExpired() {
+            return this.timerActive && this.timeRemaining === 0;
         }
     }
 });

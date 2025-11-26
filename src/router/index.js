@@ -1,9 +1,4 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import Home from '../pages/Home.vue'
-import MovieView from '../pages/MovieView.vue'
-import Booking from '../pages/Booking.vue'
-import BookingHistory from '../pages/BookingHistory.vue'
-import NotFound from '../pages/NotFound.vue'
 
 const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
@@ -11,12 +6,12 @@ const router = createRouter({
         {
             path: '/',
             name: 'home',
-            component: Home
+            component: () => import('../pages/Home.vue')
         },
-        { path: "/movie/:id", name: "MovieView", component: MovieView },
-        { path: "/booking/:id", name: "Booking", component: Booking },
-        { path: "/bookings", name: "BookingHistory", component: BookingHistory },
-        { path: "/:pathMatch(.*)*", name: "NotFound", component: NotFound }
+        { path: "/movie/:id", name: "MovieView", component: () => import('../pages/MovieView.vue') },
+        { path: "/booking/:id", name: "Booking", component: () => import('../pages/Booking.vue') },
+        { path: "/bookings", name: "BookingHistory", component: () => import('../pages/BookingHistory.vue') },
+        { path: "/:pathMatch(.*)*", name: "NotFound", component: () => import('../pages/NotFound.vue') }
         // Add more routes here
     ]
 })
