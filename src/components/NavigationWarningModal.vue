@@ -53,7 +53,7 @@
 
 <script setup>
 import { computed } from 'vue';
-import { useBookingsStore } from '../store/bookings';
+import { useStore } from 'vuex';
 
 defineProps({
   show: {
@@ -64,11 +64,11 @@ defineProps({
 
 defineEmits(['confirm', 'cancel']);
 
-const bookingsStore = useBookingsStore();
+const store = useStore();
 
 // Format remaining time as MM:SS
 const formattedTime = computed(() => {
-  const timeRemaining = bookingsStore.timeRemaining;
+  const timeRemaining = store.getters['bookings/timeRemaining'];
   const minutes = Math.floor(timeRemaining / 60);
   const seconds = timeRemaining % 60;
   return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;

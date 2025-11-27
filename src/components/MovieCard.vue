@@ -26,18 +26,18 @@
 <script setup>
 import { computed } from "vue";
 import { useRouter } from "vue-router";
-import { useFavoritesStore } from "../store/favorites";
+import { useStore } from "vuex";
 
 const props = defineProps({
   movie: Object,
 });
 
 const router = useRouter();
-const favStore = useFavoritesStore();
+const store = useStore();
 
 // Check if movie is in favorites
 const isFavorite = computed(() =>
-  favStore.favorites.some(m => m.id === props.movie.id)
+  store.getters['favorites/isFavorite'](props.movie.id)
 );
 
 const openDetails = () => {

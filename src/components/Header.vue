@@ -9,7 +9,7 @@
     <div class="flex-1 mx-6">
       <input
         type="text"
-        v-model="store.searchText"
+        v-model="searchText"
         placeholder="Search for Movies"
         class="w-full border rounded-md px-4 py-2 shadow-sm focus:outline-purple-500"
       />
@@ -27,10 +27,10 @@
         </svg>
         <span>My Bookings</span>
         <span 
-          v-if="bookingsStore.totalBookings > 0"
+          v-if="totalBookings > 0"
           class="absolute -top-2 -right-3 bg-purple-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center"
         >
-          {{ bookingsStore.totalBookings }}
+          {{ totalBookings }}
         </span>
       </router-link>
       
@@ -43,9 +43,15 @@
 </template>
 
 <script setup>
-import { useMovieStore } from '../store/movies';
-import { useBookingsStore } from '../store/bookings';
+import { computed } from 'vue';
+import { useStore } from 'vuex';
 
-const store = useMovieStore();
-const bookingsStore = useBookingsStore();
+const store = useStore();
+
+const searchText = computed({
+  get: () => store.state.movies.searchText,
+  set: (val) => store.dispatch('movies/setSearchText', val)
+});
+
+const totalBookings = computed(() => store.getters['bookings/totalBookings']);
 </script>

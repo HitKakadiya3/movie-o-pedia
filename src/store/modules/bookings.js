@@ -1,6 +1,7 @@
-import { defineStore } from "pinia";
+// Vuex module for bookings
+export default {
+    namespaced: true,
 
-export const useBookingsStore = defineStore("bookings", {
     state: () => ({
         // Initialize from localStorage (persists across browser sessions)
         bookings: JSON.parse(localStorage.getItem("bookings") || "[]"),
@@ -69,19 +70,36 @@ export const useBookingsStore = defineStore("bookings", {
         }
     },
 
-    actions: {
-        // Set current booking details (during booking flow)
-        setCurrentBooking(bookingData) {
-            this.currentBooking = {
-                ...this.currentBooking,
-                ...bookingData
-            };
-            localStorage.setItem("currentBooking", JSON.stringify(this.currentBooking));
+    mutations: {
+        SET_BOOKINGS(state, bookings) {
+            state.bookings = bookings;
         },
 
-        // Clear current booking
-        clearCurrentBooking() {
-            this.currentBooking = {
+        ADD_BOOKING(state, booking) {
+            state.bookings.push(booking);
+        },
+
+        UPDATE_BOOKING(state, { index, booking }) {
+            state.bookings[index] = booking;
+        },
+
+        DELETE_BOOKING(state, bookingId) {
+            state.bookings = state.bookings.filter(b => b.id !== bookingId);
+        },
+
+        CLEAR_BOOKINGS(state) {
+            state.bookings = [];
+        },
+
+        SET_CURRENT_BOOKING(state, bookingData) {
+            state.currentBooking = {
+                ...state.currentBooking,
+                ...bookingData
+            };
+        },
+
+        CLEAR_CURRENT_BOOKING(state) {
+            state.currentBooking = {
                 movieId: null,
                 movieTitle: null,
                 theatre: null,
@@ -89,98 +107,131 @@ export const useBookingsStore = defineStore("bookings", {
                 seats: [],
                 bookingDate: null
             };
+        },
+
+        START_TIMER(state) {
+            state.timerActive = true;
+            state.timerStartTime = Date.now();
+            state.currentTick = 0;
+        },
+
+        STOP_TIMER(state) {
+            state.timerActive = false;
+            state.timerStartTime = null;
+        },
+
+        UPDATE_TICK(state) {
+            state.currentTick++;
+        },
+
+        CANCEL_BOOKING(state, { index, status, seats }) {
+            if (seats) {
+                state.bookings[index].seats = seats;
+            }
+            if (status) {
+                state.bookings[index].status = status;
+            }
+        }
+    },
+
+    actions: {
+        // Set current booking details (during booking flow)
+        setCurrentBooking({ commit, state }, bookingData) {
+            commit('SET_CURRENT_BOOKING', bookingData);
+            localStorage.setItem("currentBooking", JSON.stringify(state.currentBooking));
+        },
+
+        // Clear current booking
+        clearCurrentBooking({ commit }) {
+            commit('CLEAR_CURRENT_BOOKING');
             localStorage.removeItem("currentBooking");
         },
 
         // Confirm and save booking
-        confirmBooking() {
+        confirmBooking({ commit, state }) {
             const booking = {
                 id: Date.now().toString(), // Simple unique ID
-                movieId: this.currentBooking.movieId,
-                movieTitle: this.currentBooking.movieTitle,
-                theatre: this.currentBooking.theatre,
-                showtime: this.currentBooking.showtime,
-                seats: [...this.currentBooking.seats],
+                movieId: state.currentBooking.movieId,
+                movieTitle: state.currentBooking.movieTitle,
+                theatre: state.currentBooking.theatre,
+                showtime: state.currentBooking.showtime,
+                seats: [...state.currentBooking.seats],
                 bookingDate: new Date().toISOString(),
                 status: "confirmed"
             };
 
-            this.bookings.push(booking);
+            commit('ADD_BOOKING', booking);
 
             // Save to localStorage
-            localStorage.setItem("bookings", JSON.stringify(this.bookings));
+            localStorage.setItem("bookings", JSON.stringify(state.bookings));
 
             // Clear current booking
-            this.clearCurrentBooking();
+            commit('CLEAR_CURRENT_BOOKING');
+            localStorage.removeItem("currentBooking");
 
             return booking;
         },
 
         // Cancel specific seats or entire booking
-        cancelBooking(bookingId, seatsToCancel = null) {
-            const index = this.bookings.findIndex(b => b.id === bookingId);
+        cancelBooking({ commit, state }, { bookingId, seatsToCancel = null }) {
+            const index = state.bookings.findIndex(b => b.id === bookingId);
             if (index !== -1) {
-                const booking = this.bookings[index];
+                const booking = state.bookings[index];
 
                 // If no specific seats provided or all seats selected, cancel entire booking
                 if (!seatsToCancel || seatsToCancel.length === booking.seats.length) {
-                    this.bookings[index].status = "cancelled";
+                    commit('CANCEL_BOOKING', { index, status: "cancelled" });
                 } else {
                     // Remove specific seats from the booking
                     const remainingSeats = booking.seats.filter(seat => !seatsToCancel.includes(seat));
 
                     if (remainingSeats.length === 0) {
                         // If no seats remain, cancel the entire booking
-                        this.bookings[index].status = "cancelled";
+                        commit('CANCEL_BOOKING', { index, status: "cancelled" });
                     } else {
                         // Update booking with remaining seats
-                        this.bookings[index].seats = remainingSeats;
+                        commit('CANCEL_BOOKING', { index, seats: remainingSeats });
                     }
                 }
 
-                localStorage.setItem("bookings", JSON.stringify(this.bookings));
+                localStorage.setItem("bookings", JSON.stringify(state.bookings));
             }
         },
 
         // Delete a booking
-        deleteBooking(bookingId) {
-            this.bookings = this.bookings.filter(b => b.id !== bookingId);
-            localStorage.setItem("bookings", JSON.stringify(this.bookings));
+        deleteBooking({ commit, state }, bookingId) {
+            commit('DELETE_BOOKING', bookingId);
+            localStorage.setItem("bookings", JSON.stringify(state.bookings));
         },
 
         // Clear all bookings
-        clearAllBookings() {
-            this.bookings = [];
+        clearAllBookings({ commit }) {
+            commit('CLEAR_BOOKINGS');
             localStorage.removeItem("bookings");
         },
 
         // Start booking timer
-        startTimer() {
-            this.timerActive = true;
-            this.timerStartTime = Date.now();
-            this.currentTick = 0;
-
+        startTimer({ commit, state }) {
+            commit('START_TIMER');
             localStorage.setItem("timerActive", "true");
-            localStorage.setItem("timerStartTime", JSON.stringify(this.timerStartTime));
+            localStorage.setItem("timerStartTime", JSON.stringify(state.timerStartTime));
         },
 
         // Update timer tick (called every second by component)
-        updateTick() {
-            this.currentTick++;
+        updateTick({ commit }) {
+            commit('UPDATE_TICK');
         },
 
         // Stop booking timer
-        stopTimer() {
-            this.timerActive = false;
-            this.timerStartTime = null;
-
+        stopTimer({ commit }) {
+            commit('STOP_TIMER');
             localStorage.removeItem("timerActive");
             localStorage.removeItem("timerStartTime");
         },
 
         // Check if timer has expired
-        isTimerExpired() {
-            return this.timerActive && this.timeRemaining === 0;
+        isTimerExpired({ state, getters }) {
+            return state.timerActive && getters.timeRemaining === 0;
         }
     }
-});
+};

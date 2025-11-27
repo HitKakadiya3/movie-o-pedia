@@ -31,15 +31,16 @@
 </template>
 
 <script setup>
+import { computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { useMovieStore } from "../store/movies";
+import { useStore } from "vuex";
 
 const route = useRoute();
 const router = useRouter();
-const store = useMovieStore();
+const store = useStore();
 
-store.getMovie(route.params.id);
-const movie = store.selectedMovie;
+store.dispatch('movies/getMovie', route.params.id);
+const movie = computed(() => store.state.movies.selectedMovie || {});
 
-const book = () => router.push(`/booking/${movie.id}`);
+const book = () => router.push(`/booking/${movie.value.id}`);
 </script>

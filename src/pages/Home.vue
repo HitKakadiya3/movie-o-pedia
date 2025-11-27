@@ -72,22 +72,22 @@
       <h2 class="text-2xl font-semibold mb-4">Recommended Movies</h2>
       
       <!-- Loading State -->
-      <div v-if="store.loading" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
+      <div v-if="loading" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
         <MovieSkeleton v-for="n in 12" :key="n" />
       </div>
 
 
       <!-- Error State -->
       <div
-        v-else-if="store.error"
+        v-else-if="error"
         class="text-center text-red-600 text-lg mt-10"
       >
-        {{ store.error }}
+        {{ error }}
       </div>
 
       <!-- No Movies Found -->
       <div
-        v-else-if="store.filteredMovies.length === 0"
+        v-else-if="filteredMovies.length === 0"
         class="text-center text-gray-600 text-lg mt-10"
       >
         No movies found.
@@ -96,7 +96,7 @@
       <!-- Movies Grid -->
       <div v-else class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
         <MovieCard
-          v-for="m in store.filteredMovies"
+          v-for="m in filteredMovies"
           :key="m.id"
           :movie="m"
         />
@@ -107,13 +107,16 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from "vue";
+import { ref, computed, onMounted, onUnmounted } from "vue";
 import MovieCard from "../components/MovieCard.vue";
-import { useMovieStore } from "../store/movies";
+import { useStore } from "vuex";
 import MovieSkeleton from "../components/MovieSkeleton.vue";
 
-const store = useMovieStore();
-const movies = store.movies;
+const store = useStore();
+
+const loading = computed(() => store.state.movies.loading);
+const error = computed(() => store.state.movies.error);
+const filteredMovies = computed(() => store.getters['movies/filteredMovies']);
 
 // Carousel data
 const banners = [
@@ -156,7 +159,7 @@ const stopAutoPlay = () => {
 // Lifecycle hooks
 onMounted(() => {
   startAutoPlay();
-  store.fetchMovies();
+  store.dispatch('movies/fetchMovies');
 });
 
 onUnmounted(() => {

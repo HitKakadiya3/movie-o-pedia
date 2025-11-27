@@ -1,6 +1,6 @@
 <template>
   <div
-    v-if="movieStore.globalLoading"
+    v-if="globalLoading"
     class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50"
   >
     <div class="loader"></div>
@@ -8,8 +8,11 @@
 </template>
 
 <script setup>
-import { useMovieStore } from "../store/movies";
-const movieStore = useMovieStore();
+import { computed } from 'vue';
+import { useStore } from 'vuex';
+
+const store = useStore();
+const globalLoading = computed(() => store.state.movies.globalLoading);
 </script>
 
 <style scoped>

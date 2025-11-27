@@ -15,7 +15,7 @@
     </div>
 
     <!-- Movie Details Layout -->
-    <div v-if="movieStore.loading" class="max-w-6xl mx-auto bg-white p-6 rounded-lg shadow-md text-center">
+    <div v-if="movieLoading" class="max-w-6xl mx-auto bg-white p-6 rounded-lg shadow-md text-center">
       <p class="text-gray-600 text-lg">Loading movie details...</p>
     </div>
 
@@ -89,40 +89,39 @@
 <script setup>
 import { useRoute, useRouter } from "vue-router";
 import { computed, onMounted } from "vue";
-import { useMovieStore } from "../store/movies";
-import { useFavoritesStore } from "../store/favorites";
+import { useStore } from "vuex";
 
 // Router
 const route = useRoute();
 const router = useRouter();
 
 // Stores
-const movieStore = useMovieStore();
-const favStore = useFavoritesStore();
+const store = useStore();
+const movieLoading = computed(() => store.state.movies.loading);
 
 // Fetch movies if not already loaded, then get the specific movie
 onMounted(async () => {
   // If movies not loaded -> fetch
-  if (movieStore.movies.length === 0) {
-    await movieStore.fetchMovies();
+  if (store.state.movies.movies.length === 0) {
+    await store.dispatch('movies/fetchMovies');
   }
 
-  movieStore.getMovie(route.params.id);
+  store.dispatch('movies/getMovie', route.params.id);
 
-  if (!movieStore.selectedMovie) {
+  if (!store.state.movies.selectedMovie) {
     router.push("/404");
   }
 });
 
 // Make movie reactive - it will update when selectedMovie changes
-const movie = computed(() => movieStore.selectedMovie || {});
+const movie = computed(() => store.state.movies.selectedMovie || {});
 
 // Check if favorite
 const isFav = computed(() =>
-  favStore.favorites.some(m => m.id === movie.value.id)
+  store.getters['favorites/isFavorite'](movie.value.id)
 );
 
-const toggleFav = () => favStore.toggleFavorite(movie.value);
+const toggleFav = () => store.dispatch('favorites/toggleFavorite', movie.value);
 
 // Go to booking page
 const book = () => {

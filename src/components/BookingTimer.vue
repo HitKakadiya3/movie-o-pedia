@@ -1,6 +1,6 @@
 <template>
   <div 
-    v-if="bookingsStore.timerActive"
+    v-if="timerActive"
     :class="[
       'fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg transition-all duration-300',
       isLowTime ? 'bg-linear-to-r from-red-500 to-red-600 animate-pulse' : 'bg-linear-to-r from-purple-500 to-purple-600'
@@ -28,13 +28,14 @@
 
 <script setup>
 import { ref, computed, onUnmounted, watch } from 'vue';
-import { useBookingsStore } from '../store/bookings';
+import { useStore } from 'vuex';
 
-const bookingsStore = useBookingsStore();
+const store = useStore();
 const emit = defineEmits(['expired']);
 
 // Current time remaining in seconds - computed from store
-const timeRemaining = computed(() => bookingsStore.timeRemaining);
+const timeRemaining = computed(() => store.getters['bookings/timeRemaining']);
+const timerActive = computed(() => store.state.bookings.timerActive);
 
 // Format time as MM:SS
 const formattedTime = computed(() => {
@@ -51,10 +52,10 @@ let intervalId = null;
 // Update timer every second
 const updateTimer = () => {
   // Update store's tick to trigger getter re-computation
-  bookingsStore.updateTick();
+  store.dispatch('bookings/updateTick');
   
   // Check if timer expired
-  if (bookingsStore.timeRemaining === 0 && bookingsStore.timerActive) {
+  if (timeRemaining.value === 0 && timerActive.value) {
     emit('expired');
     stopInterval();
   }
@@ -74,7 +75,7 @@ const stopInterval = () => {
 };
 
 // Watch for timer active state changes
-watch(() => bookingsStore.timerActive, (isActive) => {
+watch(timerActive, (isActive) => {
   if (isActive) {
     startInterval();
   } else {

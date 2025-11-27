@@ -21,7 +21,7 @@
         <div class="flex items-center justify-between">
           <div>
             <p class="text-purple-100 text-sm font-medium">Total Bookings</p>
-            <p class="text-4xl font-bold mt-1">{{ bookingsStore.totalBookings }}</p>
+            <p class="text-4xl font-bold mt-1">{{ totalBookings }}</p>
           </div>
           <div class="bg-white/20 p-4 rounded-full">
             <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -32,7 +32,7 @@
       </div>
 
       <!-- No Bookings State -->
-      <div v-if="bookingsStore.totalBookings === 0" class="bg-white rounded-lg shadow-md p-12 text-center">
+      <div v-if="totalBookings === 0" class="bg-white rounded-lg shadow-md p-12 text-center">
         <svg class="w-20 h-20 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
         </svg>
@@ -49,7 +49,7 @@
       <!-- Bookings List -->
       <div v-else class="space-y-4">
         <div
-          v-for="booking in bookingsStore.allBookings"
+          v-for="booking in allBookings"
           :key="booking.id"
           class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition"
         >
@@ -135,7 +135,7 @@
       </div>
 
       <!-- Clear All Button -->
-      <div v-if="bookingsStore.totalBookings > 0" class="mt-6 text-center">
+      <div v-if="totalBookings > 0" class="mt-6 text-center">
         <button
           @click="clearAll"
           class="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition"
@@ -158,17 +158,21 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { useRouter } from "vue-router";
-import { useBookingsStore } from "../store/bookings";
+import { useStore } from "vuex";
 import CancelBookingModal from "../components/CancelBookingModal.vue";
 
 const router = useRouter();
-const bookingsStore = useBookingsStore();
+const store = useStore();
 
 // Cancel modal state
 const showCancelModal = ref(false);
 const bookingToCancel = ref(null);
+
+// Computed properties
+const totalBookings = computed(() => store.getters['bookings/totalBookings']);
+const allBookings = computed(() => store.getters['bookings/allBookings']);
 
 // Format date to readable format
 const formatDate = (dateString) => {
@@ -184,7 +188,7 @@ const formatDate = (dateString) => {
 
 // Open cancel modal
 const cancelBooking = (bookingId) => {
-  const booking = bookingsStore.bookings.find(b => b.id === bookingId);
+  const booking = store.state.bookings.bookings.find(b => b.id === bookingId);
   if (booking) {
     bookingToCancel.value = booking;
     showCancelModal.value = true;
@@ -199,21 +203,21 @@ const closeCancelModal = () => {
 
 // Handle cancel confirmation
 const handleCancelConfirm = ({ bookingId, seatsToCancel, cancelAll }) => {
-  bookingsStore.cancelBooking(bookingId, seatsToCancel);
+  store.dispatch('bookings/cancelBooking', { bookingId, seatsToCancel });
   closeCancelModal();
 };
 
 // Delete booking
 const deleteBooking = (bookingId) => {
   if (confirm('Are you sure you want to delete this booking? This action cannot be undone.')) {
-    bookingsStore.deleteBooking(bookingId);
+    store.dispatch('bookings/deleteBooking', bookingId);
   }
 };
 
 // Clear all bookings
 const clearAll = () => {
   if (confirm('Are you sure you want to clear all bookings? This action cannot be undone.')) {
-    bookingsStore.clearAllBookings();
+    store.dispatch('bookings/clearAllBookings');
   }
 };
 
