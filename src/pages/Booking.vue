@@ -205,8 +205,32 @@ const selectedMovie = computed(() => store.state.movies.selectedMovie || {});
 const currentBooking = computed(() => store.state.bookings.currentBooking);
 const timerActive = computed(() => store.state.bookings.timerActive);
 
+// Handle browser reload/close
+const handleBeforeUnload = (event) => {
+  if (timerActive.value && !showConfirmationModal.value) {
+    showNavigationWarning.value = true;
+    
+    event.preventDefault();
+    event.returnValue = '';
+    return '';
+  }
+};
+
+// Handle keydown for F5 / Ctrl+R
+const handleKeydown = (event) => {
+  if ((event.key === 'F5') || ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'r')) {
+    if (timerActive.value && !showConfirmationModal.value) {
+      event.preventDefault();
+      showNavigationWarning.value = true;
+    }
+  }
+};
+
 // Fetch movies if not already loaded, then get the specific movie
 onMounted(async () => {
+  window.addEventListener('beforeunload', handleBeforeUnload);
+  window.addEventListener('keydown', handleKeydown);
+
   if (movies.value.length === 0) {
     await store.dispatch('movies/fetchMovies');
   }
@@ -321,7 +345,7 @@ const confirmBooking = async () => {
   store.dispatch('bookings/stopTimer');
   
   // Show confirmation modal
-  confirmedBooking.value = booking;
+  confirmedBooking.value = booking;               
   showConfirmationModal.value = true;
 };
 
@@ -371,6 +395,9 @@ const handleLeaveConfirm = () => {
     router.back();
   } else if (pendingNavigation) {
     router.push(pendingNavigation);
+  } else {
+    // Default redirect if no navigation was pending (e.g. after cancelled reload)
+    router.push('/');
   }
   pendingNavigation = null;
 };
@@ -388,6 +415,9 @@ onBeforeRouteLeave((to, from, next) => {
 
 // Cleanup timer on component unmount
 onBeforeUnmount(() => {
+  window.removeEventListener('beforeunload', handleBeforeUnload);
+  window.removeEventListener('keydown', handleKeydown);
+
   // Don't stop timer if booking was confirmed (modal is showing)
   if (!showConfirmationModal.value && timerActive.value) {
     store.dispatch('bookings/stopTimer');
