@@ -74,7 +74,7 @@
 
 <script setup>
 import { computed } from 'vue';
-import { useStore } from 'vuex';
+import { useBookingsStore } from '../store/bookings';
 
 const props = defineProps({
   modelValue: Array,
@@ -86,14 +86,14 @@ const props = defineProps({
 
 const emit = defineEmits(["update:modelValue"]);
 
-const store = useStore();
+const bookingsStore = useBookingsStore();
 
 // Get booked seats from store based on movie, theatre, and showtime
 const bookedSeats = computed(() => {
   if (!props.movieId || !props.theatreId || !props.showtime) {
     return [];
   }
-  return store.getters['bookings/getBookedSeats'](props.movieId, props.theatreId, props.showtime);
+  return bookingsStore.getBookedSeats(props.movieId, props.theatreId, props.showtime);
 });
 
 // Row seat styles

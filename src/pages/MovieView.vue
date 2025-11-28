@@ -89,39 +89,43 @@
 <script setup>
 import { useRoute, useRouter } from "vue-router";
 import { computed, onMounted } from "vue";
-import { useStore } from "vuex";
+import { useMoviesStore } from "../store/movies";
+import { useFavoritesStore } from "../store/favorites";
+import { storeToRefs } from "pinia";
 
 // Router
 const route = useRoute();
 const router = useRouter();
 
 // Stores
-const store = useStore();
-const movieLoading = computed(() => store.state.movies.loading);
+const moviesStore = useMoviesStore();
+const favoritesStore = useFavoritesStore();
+
+const { loading: movieLoading, movies, selectedMovie } = storeToRefs(moviesStore);
 
 // Fetch movies if not already loaded, then get the specific movie
 onMounted(async () => {
   // If movies not loaded -> fetch
-  if (store.state.movies.movies.length === 0) {
-    await store.dispatch('movies/fetchMovies');
+  if (movies.value.length === 0) {
+    await moviesStore.fetchMovies();
   }
 
-  store.dispatch('movies/getMovie', route.params.id);
+  moviesStore.getMovie(route.params.id);
 
-  if (!store.state.movies.selectedMovie) {
+  if (!selectedMovie.value) {
     router.push("/404");
   }
 });
 
 // Make movie reactive - it will update when selectedMovie changes
-const movie = computed(() => store.state.movies.selectedMovie || {});
+const movie = computed(() => selectedMovie.value || {});
 
 // Check if favorite
 const isFav = computed(() =>
-  store.getters['favorites/isFavorite'](movie.value.id)
+  favoritesStore.isFavorite(movie.value.id)
 );
 
-const toggleFav = () => store.dispatch('favorites/toggleFavorite', movie.value);
+const toggleFav = () => favoritesStore.toggleFavorite(movie.value);
 
 // Go to booking page
 const book = () => {

@@ -33,14 +33,16 @@
 <script setup>
 import { computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { useStore } from "vuex";
+import { useMoviesStore } from "../store/movies";
+import { storeToRefs } from "pinia";
 
 const route = useRoute();
 const router = useRouter();
-const store = useStore();
+const moviesStore = useMoviesStore();
 
-store.dispatch('movies/getMovie', route.params.id);
-const movie = computed(() => store.state.movies.selectedMovie || {});
+moviesStore.getMovie(route.params.id);
+const { selectedMovie } = storeToRefs(moviesStore);
+const movie = computed(() => selectedMovie.value || {});
 
 const book = () => router.push(`/booking/${movie.value.id}`);
 </script>

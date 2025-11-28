@@ -53,7 +53,8 @@
 
 <script setup>
 import { computed } from 'vue';
-import { useStore } from 'vuex';
+import { useBookingsStore } from '../store/bookings';
+import { storeToRefs } from 'pinia';
 
 defineProps({
   show: {
@@ -64,13 +65,14 @@ defineProps({
 
 defineEmits(['confirm', 'cancel']);
 
-const store = useStore();
+const bookingsStore = useBookingsStore();
+const { timeRemaining } = storeToRefs(bookingsStore);
 
 // Format remaining time as MM:SS
 const formattedTime = computed(() => {
-  const timeRemaining = store.getters['bookings/timeRemaining'];
-  const minutes = Math.floor(timeRemaining / 60);
-  const seconds = timeRemaining % 60;
+  const time = timeRemaining.value;
+  const minutes = Math.floor(time / 60);
+  const seconds = time % 60;
   return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 });
 </script>

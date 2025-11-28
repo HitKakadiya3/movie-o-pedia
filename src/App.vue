@@ -15,12 +15,12 @@
 <script setup>
 import { ref, onMounted, watch, nextTick } from 'vue';
 import { RouterView, useRouter, useRoute } from 'vue-router';
-import { useStore } from 'vuex';
+import { useBookingsStore } from './store/bookings';
 import Header from "./components/Header.vue";
 import GlobalLoader from "./components/GlobalLoader.vue";
 import BookingRestorationModal from "./components/BookingRestorationModal.vue";
 
-const store = useStore();
+const bookingsStore = useBookingsStore();
 const router = useRouter();
 const route = useRoute();
 
@@ -32,9 +32,9 @@ const checkAndShowModal = () => {
     return;
   }
 
-  const timerActive = store.state.bookings.timerActive;
-  const currentBooking = store.state.bookings.currentBooking;
-  const timeRemaining = store.getters['bookings/timeRemaining'];
+  const timerActive = bookingsStore.timerActive;
+  const currentBooking = bookingsStore.currentBooking;
+  const timeRemaining = bookingsStore.timeRemaining;
   
   if (timerActive && timeRemaining > 0 && currentBooking.movieId) {
     const isOnBookingPage = route.path === `/booking/${currentBooking.movieId}`;
@@ -44,8 +44,8 @@ const checkAndShowModal = () => {
     }
   } else if (timerActive && timeRemaining === 0) {
     // Timer expired, clean up
-    store.dispatch('bookings/stopTimer');
-    store.dispatch('bookings/clearCurrentBooking');
+    bookingsStore.stopTimer();
+    bookingsStore.clearCurrentBooking();
   }
 };
 
@@ -72,7 +72,7 @@ watch(() => route.path, (newPath, oldPath) => {
     return;
   }
   
-  const currentBooking = store.state.bookings.currentBooking;
+  const currentBooking = bookingsStore.currentBooking;
   
   // If user navigates to the booking page, hide the modal and mark as dismissed
   if (currentBooking.movieId && newPath === `/booking/${currentBooking.movieId}`) {

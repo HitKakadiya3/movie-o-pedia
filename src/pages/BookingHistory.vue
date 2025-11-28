@@ -160,19 +160,19 @@
 <script setup>
 import { ref, computed } from 'vue';
 import { useRouter } from "vue-router";
-import { useStore } from "vuex";
+import { useBookingsStore } from "../store/bookings";
+import { storeToRefs } from "pinia";
 import CancelBookingModal from "../components/CancelBookingModal.vue";
 
 const router = useRouter();
-const store = useStore();
+const bookingsStore = useBookingsStore();
 
 // Cancel modal state
 const showCancelModal = ref(false);
 const bookingToCancel = ref(null);
 
 // Computed properties
-const totalBookings = computed(() => store.getters['bookings/totalBookings']);
-const allBookings = computed(() => store.getters['bookings/allBookings']);
+const { totalBookings, allBookings, bookings } = storeToRefs(bookingsStore);
 
 // Format date to readable format
 const formatDate = (dateString) => {
@@ -188,7 +188,7 @@ const formatDate = (dateString) => {
 
 // Open cancel modal
 const cancelBooking = (bookingId) => {
-  const booking = store.state.bookings.bookings.find(b => b.id === bookingId);
+  const booking = bookings.value.find(b => b.id === bookingId);
   if (booking) {
     bookingToCancel.value = booking;
     showCancelModal.value = true;
@@ -203,21 +203,21 @@ const closeCancelModal = () => {
 
 // Handle cancel confirmation
 const handleCancelConfirm = ({ bookingId, seatsToCancel, cancelAll }) => {
-  store.dispatch('bookings/cancelBooking', { bookingId, seatsToCancel });
+  bookingsStore.cancelBooking({ bookingId, seatsToCancel });
   closeCancelModal();
 };
 
 // Delete booking
 const deleteBooking = (bookingId) => {
   if (confirm('Are you sure you want to delete this booking? This action cannot be undone.')) {
-    store.dispatch('bookings/deleteBooking', bookingId);
+    bookingsStore.deleteBooking(bookingId);
   }
 };
 
 // Clear all bookings
 const clearAll = () => {
   if (confirm('Are you sure you want to clear all bookings? This action cannot be undone.')) {
-    store.dispatch('bookings/clearAllBookings');
+    bookingsStore.clearAllBookings();
   }
 };
 

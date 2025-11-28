@@ -44,14 +44,15 @@
 
 <script setup>
 import { computed } from 'vue';
-import { useStore } from 'vuex';
+import { useMoviesStore } from '../store/movies';
+import { useBookingsStore } from '../store/bookings';
+import { storeToRefs } from 'pinia';
 
-const store = useStore();
+const moviesStore = useMoviesStore();
+const bookingsStore = useBookingsStore();
 
-const searchText = computed({
-  get: () => store.state.movies.searchText,
-  set: (val) => store.dispatch('movies/setSearchText', val)
-});
+// Use storeToRefs for reactive state properties to maintain reactivity when destructuring or using v-model
+const { searchText } = storeToRefs(moviesStore);
 
-const totalBookings = computed(() => store.getters['bookings/totalBookings']);
+const totalBookings = computed(() => bookingsStore.totalBookings);
 </script>

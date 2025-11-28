@@ -28,14 +28,14 @@
 
 <script setup>
 import { ref, computed, onUnmounted, watch } from 'vue';
-import { useStore } from 'vuex';
+import { useBookingsStore } from '../store/bookings';
+import { storeToRefs } from 'pinia';
 
-const store = useStore();
+const bookingsStore = useBookingsStore();
 const emit = defineEmits(['expired']);
 
 // Current time remaining in seconds - computed from store
-const timeRemaining = computed(() => store.getters['bookings/timeRemaining']);
-const timerActive = computed(() => store.state.bookings.timerActive);
+const { timeRemaining, timerActive } = storeToRefs(bookingsStore);
 
 // Format time as MM:SS
 const formattedTime = computed(() => {
@@ -52,7 +52,7 @@ let intervalId = null;
 // Update timer every second
 const updateTimer = () => {
   // Update store's tick to trigger getter re-computation
-  store.dispatch('bookings/updateTick');
+  bookingsStore.updateTick();
   
   // Check if timer expired
   if (timeRemaining.value === 0 && timerActive.value) {

@@ -109,14 +109,13 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import MovieCard from "../components/MovieCard.vue";
-import { useStore } from "vuex";
+import { useMoviesStore } from "../store/movies";
+import { storeToRefs } from "pinia";
 import MovieSkeleton from "../components/MovieSkeleton.vue";
 
-const store = useStore();
+const moviesStore = useMoviesStore();
 
-const loading = computed(() => store.state.movies.loading);
-const error = computed(() => store.state.movies.error);
-const filteredMovies = computed(() => store.getters['movies/filteredMovies']);
+const { loading, error, filteredMovies } = storeToRefs(moviesStore);
 
 // Carousel data
 const banners = [
@@ -159,7 +158,7 @@ const stopAutoPlay = () => {
 // Lifecycle hooks
 onMounted(() => {
   startAutoPlay();
-  store.dispatch('movies/fetchMovies');
+  moviesStore.fetchMovies();
 });
 
 onUnmounted(() => {

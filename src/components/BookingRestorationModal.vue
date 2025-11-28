@@ -65,8 +65,9 @@
 
 <script setup>
 import { computed } from 'vue';
-import { useStore } from 'vuex';
+import { useBookingsStore } from '../store/bookings';
 import { useRouter } from 'vue-router';
+import { storeToRefs } from 'pinia';
 
 const props = defineProps({
   show: {
@@ -77,16 +78,16 @@ const props = defineProps({
 
 const emit = defineEmits(['close']);
 
-const store = useStore();
+const bookingsStore = useBookingsStore();
 const router = useRouter();
 
-const currentBooking = computed(() => store.state.bookings.currentBooking);
+const { currentBooking, timeRemaining } = storeToRefs(bookingsStore);
 
 // Format remaining time as MM:SS
 const formattedTime = computed(() => {
-  const timeRemaining = store.getters['bookings/timeRemaining'];
-  const minutes = Math.floor(timeRemaining / 60);
-  const seconds = timeRemaining % 60;
+  const time = timeRemaining.value;
+  const minutes = Math.floor(time / 60);
+  const seconds = time % 60;
   return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 });
 
@@ -101,8 +102,8 @@ const handleContinue = () => {
 
 // Clear booking and start fresh
 const handleLeave = () => {
-  store.dispatch('bookings/stopTimer');
-  store.dispatch('bookings/clearCurrentBooking');
+  bookingsStore.stopTimer();
+  bookingsStore.clearCurrentBooking();
   emit('close');
 };
 </script>

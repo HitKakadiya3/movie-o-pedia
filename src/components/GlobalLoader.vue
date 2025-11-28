@@ -9,10 +9,11 @@
 
 <script setup>
 import { computed } from 'vue';
-import { useStore } from 'vuex';
+import { useMoviesStore } from '../store/movies';
+import { storeToRefs } from 'pinia';
 
-const store = useStore();
-const globalLoading = computed(() => store.state.movies.globalLoading);
+const moviesStore = useMoviesStore();
+const { globalLoading } = storeToRefs(moviesStore);
 </script>
 
 <style scoped>

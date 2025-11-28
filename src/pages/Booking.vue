@@ -182,7 +182,9 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, defineAsyncComponent } from "vue";
 import { useRoute, useRouter, onBeforeRouteLeave } from "vue-router";
-import { useStore } from "vuex";
+import { useMoviesStore } from "../store/movies";
+import { useBookingsStore } from "../store/bookings";
+import { storeToRefs } from "pinia";
 import SeatGrid from "../components/SeatGrid.vue";
 import BookingTimer from "../components/BookingTimer.vue";
 import { theatreLayouts } from "../data/theatreLayouts";
@@ -196,14 +198,12 @@ const NavigationWarningModal = defineAsyncComponent(() =>
 
 const route = useRoute();
 const router = useRouter();
-const store = useStore();
+const moviesStore = useMoviesStore();
+const bookingsStore = useBookingsStore();
 
 // Computed properties for state
-const movies = computed(() => store.state.movies.movies);
-const movieLoading = computed(() => store.state.movies.loading);
-const selectedMovie = computed(() => store.state.movies.selectedMovie || {});
-const currentBooking = computed(() => store.state.bookings.currentBooking);
-const timerActive = computed(() => store.state.bookings.timerActive);
+const { movies, loading: movieLoading, selectedMovie } = storeToRefs(moviesStore);
+const { currentBooking, timerActive, timeRemaining } = storeToRefs(bookingsStore);
 
 // Handle browser reload/close
 const handleBeforeUnload = (event) => {
@@ -232,9 +232,9 @@ onMounted(async () => {
   window.addEventListener('keydown', handleKeydown);
 
   if (movies.value.length === 0) {
-    await store.dispatch('movies/fetchMovies');
+    await moviesStore.fetchMovies();
   }
-  store.dispatch('movies/getMovie', route.params.id);
+  moviesStore.getMovie(route.params.id);
   
   // Restore state from store if available
   if (currentBooking.value.movieId === route.params.id) {
@@ -257,13 +257,12 @@ onMounted(async () => {
     }
   } else {
     // If booking is for a different movie, clear it
-    store.dispatch('bookings/clearCurrentBooking');
-    store.dispatch('bookings/stopTimer');
+    bookingsStore.clearCurrentBooking();
+    bookingsStore.stopTimer();
   }
   
   // Check if timer expired while we were away
-  const timeRemaining = store.getters['bookings/timeRemaining'];
-  if (timerActive.value && timeRemaining === 0) {
+  if (timerActive.value && timeRemaining.value === 0) {
     handleTimerExpired();
   }
 });
@@ -303,7 +302,7 @@ const selectTheatre = (theatre) => {
   selectedLayout.value = theatreLayouts[theatre.id].layout;
   
   // Save theatre selection to bookings store
-  store.dispatch('bookings/setCurrentBooking', {
+  bookingsStore.setCurrentBooking({
     movieId: movie.value.id,
     movieTitle: movie.value.title,
     theatre: {
@@ -314,7 +313,7 @@ const selectTheatre = (theatre) => {
   });
   
   // Start timer when booking begins
-  store.dispatch('bookings/startTimer');
+  bookingsStore.startTimer();
   
   step.value = 2;
 };
@@ -325,7 +324,7 @@ const showTimes = ["9:00 AM", "1:00 PM", "4:30 PM", "7:00 PM", "10:15 PM"];
 // Continue to seat selection
 const continueToSeats = () => {
   // Save showtime to store so it persists
-  store.dispatch('bookings/setCurrentBooking', {
+  bookingsStore.setCurrentBooking({
     showtime: selectedTime.value
   });
   step.value = 3;
@@ -333,16 +332,16 @@ const continueToSeats = () => {
 
 const confirmBooking = async () => {
   // Update current booking with final details
-  store.dispatch('bookings/setCurrentBooking', {
+  bookingsStore.setCurrentBooking({
     showtime: selectedTime.value,
     seats: selectedSeats.value
   });
   
   // Confirm and save booking to localStorage
-  const booking = await store.dispatch('bookings/confirmBooking');
+  const booking = await bookingsStore.confirmBooking();
   
   // Stop timer when booking is confirmed
-  store.dispatch('bookings/stopTimer');
+  bookingsStore.stopTimer();
   
   // Show confirmation modal
   confirmedBooking.value = booking;               
@@ -378,8 +377,8 @@ const goBack = () => {
 // Handle timer expiration
 const handleTimerExpired = () => {
   // Clear booking data
-  store.dispatch('bookings/clearCurrentBooking');
-  store.dispatch('bookings/stopTimer');
+  bookingsStore.clearCurrentBooking();
+  bookingsStore.stopTimer();
   
   // Redirect to home page
   router.push('/');
@@ -388,8 +387,8 @@ const handleTimerExpired = () => {
 // Handle confirmed leave
 const handleLeaveConfirm = () => {
   showNavigationWarning.value = false;
-  store.dispatch('bookings/stopTimer');
-  store.dispatch('bookings/clearCurrentBooking');
+  bookingsStore.stopTimer();
+  bookingsStore.clearCurrentBooking();
   
   if (pendingNavigation === 'back') {
     router.back();
@@ -420,8 +419,8 @@ onBeforeUnmount(() => {
 
   // Don't stop timer if booking was confirmed (modal is showing)
   if (!showConfirmationModal.value && timerActive.value) {
-    store.dispatch('bookings/stopTimer');
-    store.dispatch('bookings/clearCurrentBooking');
+    bookingsStore.stopTimer();
+    bookingsStore.clearCurrentBooking();
   }
 });
 </script>
